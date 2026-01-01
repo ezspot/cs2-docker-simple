@@ -1,4 +1,37 @@
+# Secrets - NEVER commit actual credentials
+secrets/*.txt
+secrets/**/*.txt
+!secrets/*.example
+!secrets/README.md
+
+# Environment files - contain sensitive config
 .env
-**/.env
-**/logs/
-**/backups/
+.env.*
+!.env.example
+servers/*/.env
+servers/*/.env.*
+!servers/*/.env.example
+
+# Server data directories (game files are massive)
+servers/*/data/
+data/
+
+# Logs and backups
+*.log
+*.bak
+*.backup
+logs/
+
+# Restart markers and runtime state
+*.restart_required
+*.health_failure_count
+*.first_ready
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

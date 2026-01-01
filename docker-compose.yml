@@ -1,0 +1,377 @@
+# CS2 Multi-Server Production Architecture - Jan 2026
+# Compose Specification compliant (no version tag for latest features)
+# DevSecOps hardened with secrets management, resource limits, and operational tooling
+
+secrets:
+  # Per-server SRCDS tokens
+  gather1_srcds_token:
+    file: ./secrets/gather1_srcds_token.txt
+  gather2_srcds_token:
+    file: ./secrets/gather2_srcds_token.txt
+  deathmatch_srcds_token:
+    file: ./secrets/deathmatch_srcds_token.txt
+  retake1_srcds_token:
+    file: ./secrets/retake1_srcds_token.txt
+  retake2_srcds_token:
+    file: ./secrets/retake2_srcds_token.txt
+  retake3_srcds_token:
+    file: ./secrets/retake3_srcds_token.txt
+  
+  # Per-server RCON passwords
+  gather1_rcon_password:
+    file: ./secrets/gather1_rcon_password.txt
+  gather2_rcon_password:
+    file: ./secrets/gather2_rcon_password.txt
+  deathmatch_rcon_password:
+    file: ./secrets/deathmatch_rcon_password.txt
+  retake1_rcon_password:
+    file: ./secrets/retake1_rcon_password.txt
+  retake2_rcon_password:
+    file: ./secrets/retake2_rcon_password.txt
+  retake3_rcon_password:
+    file: ./secrets/retake3_rcon_password.txt
+  
+  # Per-server Discord webhooks
+  gather1_discord_webhook:
+    file: ./secrets/gather1_discord_webhook.txt
+  gather2_discord_webhook:
+    file: ./secrets/gather2_discord_webhook.txt
+  deathmatch_discord_webhook:
+    file: ./secrets/deathmatch_discord_webhook.txt
+  retake1_discord_webhook:
+    file: ./secrets/retake1_discord_webhook.txt
+  retake2_discord_webhook:
+    file: ./secrets/retake2_discord_webhook.txt
+  retake3_discord_webhook:
+    file: ./secrets/retake3_discord_webhook.txt
+
+x-common-config: &common-config
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: ezspot-cs2-server:production
+  restart: unless-stopped
+  entrypoint: ["/bin/bash", "/home/steam/entrypoint-wrapper.sh"]
+  
+  # Security hardening
+  security_opt:
+    - label:disable
+  cap_drop:
+    - ALL
+  cap_add:
+    - NET_BIND_SERVICE
+    - SYS_NICE
+  read_only: false  # CS2 requires write access to game directory
+  tmpfs:
+    - /tmp:mode=1777,size=512m
+  
+  # Resource limits
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 2048
+      hard: 2048
+  
+  # Logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+  
+  # Healthcheck
+  healthcheck:
+    test: ["CMD", "/bin/bash", "/home/steam/healthcheck.sh"]
+    interval: 60s
+    timeout: 30s
+    retries: 10
+    start_period: 3600s
+  
+  # Common environment variables defined per service below
+  # Secrets are defined per-service below for isolation
+  
+  # Common volume mounts
+  volumes: &common-volumes
+    - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+    - ./scripts/pre.sh:/home/steam/pre.sh:ro
+    - ./scripts/post.sh:/home/steam/post.sh:ro
+    - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+    - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+    - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+
+services:
+  gather1:
+    <<: *common-config
+    container_name: cs2-gather1
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: ${GATHER1_MEM_LIMIT:-4g}
+          pids: 512
+    ports:
+      - "27015:27015/udp"
+      - "27015:27015/tcp"
+      - "27020:27020/udp"
+    environment:
+      - CS2_PORT=27015
+      - CS2_SERVERNAME=${GATHER1_SERVERNAME:-CS2-Gather1}
+      - CS2_GAMEALIAS=competitive
+      - CS2_GAMETYPE=0
+      - CS2_GAMEMODE=1
+      - CS2_STARTMAP=${GATHER1_STARTMAP:-de_mirage}
+      - CS2_MAXPLAYERS=${GATHER1_MAXPLAYERS:-10}
+      - CS2_PW=${GATHER1_PW:-}
+      - CS2_BOT_QUOTA=${GATHER1_BOT_QUOTA:-0}
+      - TV_ENABLE=${GATHER1_TV_ENABLE:-1}
+      - TV_PORT=27020
+      - CS2_LOG=on
+      - DEBUG=${DEBUG:-1}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
+      - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_competitive_server.cfg
+    secrets:
+      - gather1_srcds_token
+      - gather1_rcon_password
+      - gather1_discord_webhook
+    volumes:
+      - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+      - ./scripts/pre.sh:/home/steam/pre.sh:ro
+      - ./scripts/post.sh:/home/steam/post.sh:ro
+      - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./servers/gather1/data:/home/steam/cs2-dedicated:rw
+      - ./cfg/gamemode_competitive_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_competitive_server.cfg:ro
+      - ./servers/gather1/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+
+  gather2:
+    <<: *common-config
+    container_name: cs2-gather2
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: ${GATHER2_MEM_LIMIT:-4g}
+          pids: 512
+    secrets:
+      - gather2_srcds_token
+      - gather2_rcon_password
+      - gather2_discord_webhook
+    ports:
+      - "27016:27016/udp"
+      - "27016:27016/tcp"
+      - "27021:27021/udp"
+    environment:
+      - CS2_PORT=27016
+      - CS2_SERVERNAME=${GATHER2_SERVERNAME:-CS2-Gather2}
+      - CS2_GAMEALIAS=competitive
+      - CS2_GAMETYPE=0
+      - CS2_GAMEMODE=1
+      - CS2_STARTMAP=${GATHER2_STARTMAP:-de_dust2}
+      - CS2_MAXPLAYERS=${GATHER2_MAXPLAYERS:-10}
+      - CS2_PW=${GATHER2_PW:-}
+      - CS2_BOT_QUOTA=${GATHER2_BOT_QUOTA:-0}
+      - TV_ENABLE=${GATHER2_TV_ENABLE:-1}
+      - TV_PORT=27021
+      - CS2_LOG=on
+      - DEBUG=${DEBUG:-1}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
+      - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_competitive_server.cfg
+    volumes:
+      - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+      - ./scripts/pre.sh:/home/steam/pre.sh:ro
+      - ./scripts/post.sh:/home/steam/post.sh:ro
+      - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./servers/gather2/data:/home/steam/cs2-dedicated:rw
+      - ./cfg/gamemode_competitive_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_competitive_server.cfg:ro
+      - ./servers/gather2/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+
+  deathmatch:
+    <<: *common-config
+    container_name: cs2-deathmatch
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: ${DEATHMATCH_MEM_LIMIT:-4g}
+          pids: 512
+    secrets:
+      - deathmatch_srcds_token
+      - deathmatch_rcon_password
+      - deathmatch_discord_webhook
+    ports:
+      - "27017:27017/udp"
+      - "27017:27017/tcp"
+      - "27022:27022/udp"
+    environment:
+      - CS2_PORT=27017
+      - CS2_SERVERNAME=${DEATHMATCH_SERVERNAME:-CS2-Deathmatch}
+      - CS2_GAMEALIAS=deathmatch
+      - CS2_GAMETYPE=1
+      - CS2_GAMEMODE=2
+      - CS2_STARTMAP=${DEATHMATCH_STARTMAP:-de_dust2}
+      - CS2_MAXPLAYERS=${DEATHMATCH_MAXPLAYERS:-18}
+      - CS2_PW=${DEATHMATCH_PW:-}
+      - CS2_BOT_QUOTA=${DEATHMATCH_BOT_QUOTA:-0}
+      - TV_ENABLE=${DEATHMATCH_TV_ENABLE:-1}
+      - TV_PORT=27022
+      - CS2_LOG=on
+      - DEBUG=${DEBUG:-1}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
+      - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_deathmatch_server.cfg
+    volumes:
+      - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+      - ./scripts/pre.sh:/home/steam/pre.sh:ro
+      - ./scripts/post.sh:/home/steam/post.sh:ro
+      - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./servers/deathmatch/data:/home/steam/cs2-dedicated:rw
+      - ./cfg/gamemode_deathmatch_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_deathmatch_server.cfg:ro
+      - ./servers/deathmatch/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+
+  retake1:
+    <<: *common-config
+    container_name: cs2-retake1
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: ${RETAKE1_MEM_LIMIT:-4g}
+          pids: 512
+    secrets:
+      - retake1_srcds_token
+      - retake1_rcon_password
+      - retake1_discord_webhook
+    ports:
+      - "27018:27018/udp"
+      - "27018:27018/tcp"
+      - "27023:27023/udp"
+    environment:
+      - CS2_PORT=27018
+      - CS2_SERVERNAME=${RETAKE1_SERVERNAME:-CS2-Retake1}
+      - CS2_GAMEALIAS=retake
+      - CS2_GAMETYPE=0
+      - CS2_GAMEMODE=0
+      - CS2_STARTMAP=${RETAKE1_STARTMAP:-de_dust2}
+      - CS2_MAXPLAYERS=${RETAKE1_MAXPLAYERS:-9}
+      - CS2_PW=${RETAKE1_PW:-}
+      - CS2_BOT_QUOTA=${RETAKE1_BOT_QUOTA:-0}
+      - TV_ENABLE=${RETAKE1_TV_ENABLE:-1}
+      - TV_PORT=27023
+      - CS2_LOG=on
+      - DEBUG=${DEBUG:-1}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
+      - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_retake_server.cfg
+    volumes:
+      - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+      - ./scripts/pre.sh:/home/steam/pre.sh:ro
+      - ./scripts/post.sh:/home/steam/post.sh:ro
+      - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./servers/retake1/data:/home/steam/cs2-dedicated:rw
+      - ./cfg/gamemode_retake_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_retake_server.cfg:ro
+      - ./servers/retake1/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+
+  retake2:
+    <<: *common-config
+    container_name: cs2-retake2
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: ${RETAKE2_MEM_LIMIT:-4g}
+          pids: 512
+    secrets:
+      - retake2_srcds_token
+      - retake2_rcon_password
+      - retake2_discord_webhook
+    ports:
+      - "27019:27019/udp"
+      - "27019:27019/tcp"
+      - "27024:27024/udp"
+    environment:
+      - CS2_PORT=27019
+      - CS2_SERVERNAME=${RETAKE2_SERVERNAME:-CS2-Retake2}
+      - CS2_GAMEALIAS=retake
+      - CS2_GAMETYPE=0
+      - CS2_GAMEMODE=0
+      - CS2_STARTMAP=${RETAKE2_STARTMAP:-de_mirage}
+      - CS2_MAXPLAYERS=${RETAKE2_MAXPLAYERS:-9}
+      - CS2_PW=${RETAKE2_PW:-}
+      - CS2_BOT_QUOTA=${RETAKE2_BOT_QUOTA:-0}
+      - TV_ENABLE=${RETAKE2_TV_ENABLE:-1}
+      - TV_PORT=27024
+      - CS2_LOG=on
+      - DEBUG=${DEBUG:-1}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
+      - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_retake_server.cfg
+    volumes:
+      - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+      - ./scripts/pre.sh:/home/steam/pre.sh:ro
+      - ./scripts/post.sh:/home/steam/post.sh:ro
+      - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./servers/retake2/data:/home/steam/cs2-dedicated:rw
+      - ./cfg/gamemode_retake_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_retake_server.cfg:ro
+      - ./servers/retake2/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+
+  retake3:
+    <<: *common-config
+    container_name: cs2-retake3
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: ${RETAKE3_MEM_LIMIT:-4g}
+          pids: 512
+    secrets:
+      - retake3_srcds_token
+      - retake3_rcon_password
+      - retake3_discord_webhook
+    ports:
+      - "27020:27020/udp"
+      - "27020:27020/tcp"
+      - "27025:27025/udp"
+    environment:
+      - CS2_PORT=27020
+      - CS2_SERVERNAME=${RETAKE3_SERVERNAME:-CS2-Retake3}
+      - CS2_GAMEALIAS=retake
+      - CS2_GAMETYPE=0
+      - CS2_GAMEMODE=0
+      - CS2_STARTMAP=${RETAKE3_STARTMAP:-de_inferno}
+      - CS2_MAXPLAYERS=${RETAKE3_MAXPLAYERS:-9}
+      - CS2_PW=${RETAKE3_PW:-}
+      - CS2_BOT_QUOTA=${RETAKE3_BOT_QUOTA:-0}
+      - TV_ENABLE=${RETAKE3_TV_ENABLE:-1}
+      - TV_PORT=27025
+      - CS2_LOG=on
+      - DEBUG=${DEBUG:-1}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
+      - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_retake_server.cfg
+    volumes:
+      - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
+      - ./scripts/pre.sh:/home/steam/pre.sh:ro
+      - ./scripts/post.sh:/home/steam/post.sh:ro
+      - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./servers/retake3/data:/home/steam/cs2-dedicated:rw
+      - ./cfg/gamemode_retake_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_retake_server.cfg:ro
+      - ./servers/retake3/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro

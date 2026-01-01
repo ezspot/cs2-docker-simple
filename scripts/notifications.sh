@@ -15,7 +15,13 @@ notify_discord() {
     local color=${2:-3447003} # Default blue
     local status=${3:-"INFO"}
     
-    if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
+    # Read Discord webhook from Docker secret if available
+    local webhook_url="${DISCORD_WEBHOOK_URL:-}"
+    if [[ -f /run/secrets/discord_webhook ]]; then
+        webhook_url=$(cat /run/secrets/discord_webhook)
+    fi
+    
+    if [[ -z "$webhook_url" ]]; then
         return 0
     fi
 
@@ -54,5 +60,5 @@ notify_discord() {
             }]
         }')
 
-    curl -s -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL" > /dev/null || echo "Failed to send Discord notification"
+    curl -s -H "Content-Type: application/json" -X POST -d "$payload" "$webhook_url" > /dev/null || echo "Failed to send Discord notification"
 }
