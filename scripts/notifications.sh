@@ -15,10 +15,21 @@ notify_discord() {
     local color=${2:-3447003} # Default blue
     local status=${3:-"INFO"}
     
-    # Read Discord webhook from Docker secret if available
+    # Load persisted webhook if environment variable is missing
+    if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]] && [[ -f /home/steam/.discord_webhook ]]; then
+        source /home/steam/.discord_webhook
+    fi
+
     local webhook_url="${DISCORD_WEBHOOK_URL:-}"
-    if [[ -f /run/secrets/discord_webhook ]]; then
-        webhook_url=$(cat /run/secrets/discord_webhook)
+    
+    if [[ -z "$webhook_url" ]]; then
+        # Try to find any per-server webhook secret as a last resort
+        for secret_file in /run/secrets/*_discord_webhook; do
+            if [[ -f "$secret_file" ]]; then
+                webhook_url=$(cat "$secret_file")
+                break
+            fi
+        done
     fi
     
     if [[ -z "$webhook_url" ]]; then
@@ -35,6 +46,7 @@ notify_discord() {
         STOPPING) icon="🛑" ;;
         ERROR) icon="❌" ;;
         HEALTH_ALERT) icon="🚨" ;;
+        DISK_LOW) icon="💾" ;;
         *) icon="ℹ️" ;;
     esac
 

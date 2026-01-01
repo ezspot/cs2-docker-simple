@@ -41,6 +41,8 @@ if [[ -n "$SERVER_PREFIX" ]]; then
         WEBHOOK_VAL=$(cat "/run/secrets/${SERVER_PREFIX}_discord_webhook")
         if [[ -n "$WEBHOOK_VAL" && "$WEBHOOK_VAL" != "YOUR_WEBHOOK_URL" ]]; then
             export DISCORD_WEBHOOK_URL="$WEBHOOK_VAL"
+            # Explicitly export for subsequent scripts like pre.sh/post.sh
+            echo "export DISCORD_WEBHOOK_URL='$WEBHOOK_VAL'" > /home/steam/.discord_webhook
         fi
     fi
 else

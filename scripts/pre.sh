@@ -3,6 +3,19 @@
 source /home/steam/notifications.sh
 
 log "INFO" "Pre-start hook running for ${CS2_SERVERNAME}..."
+
+# Check for sufficient disk space (~60GB required for CS2)
+FREE_SPACE=$(df -m /home/steam/cs2-dedicated | tail -1 | awk '{print $4}')
+if [ "$FREE_SPACE" -lt 61440 ]; then
+    log "WARN" "Low disk space detected: ${FREE_SPACE}MB free. CS2 requires ~60GB. This may cause SteamCMD 0x602 errors."
+    notify_discord "Warning: Low disk space (${FREE_SPACE}MB free). Update may fail." "16711680" "DISK_LOW"
+fi
+
+# Deploy custom configurations after SteamCMD completes
+if [ -f /home/steam/deploy-configs.sh ]; then
+    /bin/bash /home/steam/deploy-configs.sh
+fi
+
 # Reset health failure count and ready flag
 rm -f /tmp/health_fail_count
 rm -f /tmp/server_ready

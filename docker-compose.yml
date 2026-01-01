@@ -56,6 +56,7 @@ x-common-config: &common-config
   # Security hardening
   security_opt:
     - label:disable
+    - no-new-privileges:true
   cap_drop:
     - ALL
   cap_add:
@@ -69,8 +70,8 @@ x-common-config: &common-config
   ulimits:
     nproc: 65535
     nofile:
-      soft: 2048
-      hard: 2048
+      soft: 65535
+      hard: 65535
   
   # Logging
   logging:
@@ -90,7 +91,7 @@ x-common-config: &common-config
   # Common environment variables defined per service below
   # Secrets are defined per-service below for isolation
   
-  # Common volume mounts
+  # Common volume mounts for all instances
   volumes: &common-volumes
     - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
     - ./scripts/pre.sh:/home/steam/pre.sh:ro
@@ -109,24 +110,25 @@ services:
           cpus: '2.0'
           memory: ${GATHER1_MEM_LIMIT:-4g}
           pids: 512
+    cpuset: ${GATHER1_CPUSET:-}
     ports:
       - "27015:27015/udp"
       - "27015:27015/tcp"
-      - "27020:27020/udp"
+      - "28015:28015/udp"
     environment:
       - CS2_PORT=27015
       - CS2_SERVERNAME=${GATHER1_SERVERNAME:-CS2-Gather1}
       - CS2_GAMEALIAS=competitive
       - CS2_GAMETYPE=0
       - CS2_GAMEMODE=1
-      - CS2_STARTMAP=${GATHER1_STARTMAP:-de_mirage}
+      - CS2_STARTMAP=${GATHER1_STARTMAP:-de_inferno}
       - CS2_MAXPLAYERS=${GATHER1_MAXPLAYERS:-10}
       - CS2_PW=${GATHER1_PW:-}
       - CS2_BOT_QUOTA=${GATHER1_BOT_QUOTA:-0}
       - TV_ENABLE=${GATHER1_TV_ENABLE:-1}
-      - TV_PORT=27020
+      - TV_PORT=28015
       - CS2_LOG=on
-      - DEBUG=${DEBUG:-1}
+      - DEBUG=${DEBUG:-0}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
@@ -142,9 +144,10 @@ services:
       - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
-      - ./servers/gather1/data:/home/steam/cs2-dedicated:rw
-      - ./cfg/gamemode_competitive_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_competitive_server.cfg:ro
-      - ./servers/gather1/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+      - ./scripts/deploy-configs.sh:/home/steam/deploy-configs.sh:ro
+      - ./cfg:/home/steam/configs:ro
+      - ./servers/gather1/mapcycle.txt:/home/steam/mapcycles/competitive.txt:ro
+      - cs2-gather1-data:/home/steam/cs2-dedicated:rw
 
   gather2:
     <<: *common-config
@@ -155,6 +158,7 @@ services:
           cpus: '2.0'
           memory: ${GATHER2_MEM_LIMIT:-4g}
           pids: 512
+    cpuset: ${GATHER2_CPUSET:-}
     secrets:
       - gather2_srcds_token
       - gather2_rcon_password
@@ -162,21 +166,21 @@ services:
     ports:
       - "27016:27016/udp"
       - "27016:27016/tcp"
-      - "27021:27021/udp"
+      - "28016:28016/udp"
     environment:
       - CS2_PORT=27016
       - CS2_SERVERNAME=${GATHER2_SERVERNAME:-CS2-Gather2}
       - CS2_GAMEALIAS=competitive
       - CS2_GAMETYPE=0
       - CS2_GAMEMODE=1
-      - CS2_STARTMAP=${GATHER2_STARTMAP:-de_dust2}
+      - CS2_STARTMAP=${GATHER2_STARTMAP:-de_inferno}
       - CS2_MAXPLAYERS=${GATHER2_MAXPLAYERS:-10}
       - CS2_PW=${GATHER2_PW:-}
       - CS2_BOT_QUOTA=${GATHER2_BOT_QUOTA:-0}
       - TV_ENABLE=${GATHER2_TV_ENABLE:-1}
-      - TV_PORT=27021
+      - TV_PORT=28016
       - CS2_LOG=on
-      - DEBUG=${DEBUG:-1}
+      - DEBUG=${DEBUG:-0}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
@@ -188,9 +192,10 @@ services:
       - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
-      - ./servers/gather2/data:/home/steam/cs2-dedicated:rw
-      - ./cfg/gamemode_competitive_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_competitive_server.cfg:ro
-      - ./servers/gather2/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+      - ./scripts/deploy-configs.sh:/home/steam/deploy-configs.sh:ro
+      - ./cfg:/home/steam/configs:ro
+      - ./servers/gather2/mapcycle.txt:/home/steam/mapcycles/competitive.txt:ro
+      - cs2-gather2-data:/home/steam/cs2-dedicated:rw
 
   deathmatch:
     <<: *common-config
@@ -201,6 +206,7 @@ services:
           cpus: '2.0'
           memory: ${DEATHMATCH_MEM_LIMIT:-4g}
           pids: 512
+    cpuset: ${DEATHMATCH_CPUSET:-}
     secrets:
       - deathmatch_srcds_token
       - deathmatch_rcon_password
@@ -208,7 +214,7 @@ services:
     ports:
       - "27017:27017/udp"
       - "27017:27017/tcp"
-      - "27022:27022/udp"
+      - "28017:28017/udp"
     environment:
       - CS2_PORT=27017
       - CS2_SERVERNAME=${DEATHMATCH_SERVERNAME:-CS2-Deathmatch}
@@ -216,13 +222,13 @@ services:
       - CS2_GAMETYPE=1
       - CS2_GAMEMODE=2
       - CS2_STARTMAP=${DEATHMATCH_STARTMAP:-de_dust2}
-      - CS2_MAXPLAYERS=${DEATHMATCH_MAXPLAYERS:-18}
+      - CS2_MAXPLAYERS=${DEATHMATCH_MAXPLAYERS:-16}
       - CS2_PW=${DEATHMATCH_PW:-}
       - CS2_BOT_QUOTA=${DEATHMATCH_BOT_QUOTA:-0}
       - TV_ENABLE=${DEATHMATCH_TV_ENABLE:-1}
-      - TV_PORT=27022
+      - TV_PORT=28017
       - CS2_LOG=on
-      - DEBUG=${DEBUG:-1}
+      - DEBUG=${DEBUG:-0}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
@@ -234,9 +240,10 @@ services:
       - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
-      - ./servers/deathmatch/data:/home/steam/cs2-dedicated:rw
-      - ./cfg/gamemode_deathmatch_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_deathmatch_server.cfg:ro
-      - ./servers/deathmatch/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+      - ./scripts/deploy-configs.sh:/home/steam/deploy-configs.sh:ro
+      - ./cfg:/home/steam/configs:ro
+      - ./servers/deathmatch/mapcycle.txt:/home/steam/mapcycles/deathmatch.txt:ro
+      - cs2-deathmatch-data:/home/steam/cs2-dedicated:rw
 
   retake1:
     <<: *common-config
@@ -247,6 +254,7 @@ services:
           cpus: '2.0'
           memory: ${RETAKE1_MEM_LIMIT:-4g}
           pids: 512
+    cpuset: ${RETAKE1_CPUSET:-}
     secrets:
       - retake1_srcds_token
       - retake1_rcon_password
@@ -254,7 +262,7 @@ services:
     ports:
       - "27018:27018/udp"
       - "27018:27018/tcp"
-      - "27023:27023/udp"
+      - "28018:28018/udp"
     environment:
       - CS2_PORT=27018
       - CS2_SERVERNAME=${RETAKE1_SERVERNAME:-CS2-Retake1}
@@ -266,13 +274,13 @@ services:
       - CS2_PW=${RETAKE1_PW:-}
       - CS2_BOT_QUOTA=${RETAKE1_BOT_QUOTA:-0}
       - TV_ENABLE=${RETAKE1_TV_ENABLE:-1}
-      - TV_PORT=27023
+      - TV_PORT=28018
       - CS2_LOG=on
-      - DEBUG=${DEBUG:-1}
+      - DEBUG=${DEBUG:-0}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
-      - CS2_ADDITIONAL_ARGS=+exec gamemode_retake_server.cfg
+      - CS2_ADDITIONAL_ARGS=+game_type 0 +game_mode 0 +exec gamemode_retake_server.cfg
     volumes:
       - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
       - ./scripts/pre.sh:/home/steam/pre.sh:ro
@@ -280,9 +288,10 @@ services:
       - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
-      - ./servers/retake1/data:/home/steam/cs2-dedicated:rw
-      - ./cfg/gamemode_retake_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_retake_server.cfg:ro
-      - ./servers/retake1/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+      - ./scripts/deploy-configs.sh:/home/steam/deploy-configs.sh:ro
+      - ./cfg:/home/steam/configs:ro
+      - ./servers/retake1/mapcycle.txt:/home/steam/mapcycles/retake.txt:ro
+      - cs2-retake1-data:/home/steam/cs2-dedicated:rw
 
   retake2:
     <<: *common-config
@@ -293,6 +302,7 @@ services:
           cpus: '2.0'
           memory: ${RETAKE2_MEM_LIMIT:-4g}
           pids: 512
+    cpuset: ${RETAKE2_CPUSET:-}
     secrets:
       - retake2_srcds_token
       - retake2_rcon_password
@@ -300,25 +310,25 @@ services:
     ports:
       - "27019:27019/udp"
       - "27019:27019/tcp"
-      - "27024:27024/udp"
+      - "28019:28019/udp"
     environment:
       - CS2_PORT=27019
       - CS2_SERVERNAME=${RETAKE2_SERVERNAME:-CS2-Retake2}
       - CS2_GAMEALIAS=retake
       - CS2_GAMETYPE=0
       - CS2_GAMEMODE=0
-      - CS2_STARTMAP=${RETAKE2_STARTMAP:-de_mirage}
+      - CS2_STARTMAP=${RETAKE2_STARTMAP:-de_dust2}
       - CS2_MAXPLAYERS=${RETAKE2_MAXPLAYERS:-9}
       - CS2_PW=${RETAKE2_PW:-}
       - CS2_BOT_QUOTA=${RETAKE2_BOT_QUOTA:-0}
       - TV_ENABLE=${RETAKE2_TV_ENABLE:-1}
-      - TV_PORT=27024
+      - TV_PORT=28019
       - CS2_LOG=on
-      - DEBUG=${DEBUG:-1}
+      - DEBUG=${DEBUG:-0}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
-      - CS2_ADDITIONAL_ARGS=+exec gamemode_retake_server.cfg
+      - CS2_ADDITIONAL_ARGS=+game_type 0 +game_mode 0 +exec gamemode_retake_server.cfg
     volumes:
       - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
       - ./scripts/pre.sh:/home/steam/pre.sh:ro
@@ -326,9 +336,10 @@ services:
       - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
-      - ./servers/retake2/data:/home/steam/cs2-dedicated:rw
-      - ./cfg/gamemode_retake_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_retake_server.cfg:ro
-      - ./servers/retake2/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+      - ./scripts/deploy-configs.sh:/home/steam/deploy-configs.sh:ro
+      - ./cfg:/home/steam/configs:ro
+      - ./servers/retake2/mapcycle.txt:/home/steam/mapcycles/retake.txt:ro
+      - cs2-retake2-data:/home/steam/cs2-dedicated:rw
 
   retake3:
     <<: *common-config
@@ -339,6 +350,7 @@ services:
           cpus: '2.0'
           memory: ${RETAKE3_MEM_LIMIT:-4g}
           pids: 512
+    cpuset: ${RETAKE3_CPUSET:-}
     secrets:
       - retake3_srcds_token
       - retake3_rcon_password
@@ -346,7 +358,7 @@ services:
     ports:
       - "27020:27020/udp"
       - "27020:27020/tcp"
-      - "27025:27025/udp"
+      - "28020:28020/udp"
     environment:
       - CS2_PORT=27020
       - CS2_SERVERNAME=${RETAKE3_SERVERNAME:-CS2-Retake3}
@@ -358,13 +370,13 @@ services:
       - CS2_PW=${RETAKE3_PW:-}
       - CS2_BOT_QUOTA=${RETAKE3_BOT_QUOTA:-0}
       - TV_ENABLE=${RETAKE3_TV_ENABLE:-1}
-      - TV_PORT=27025
+      - TV_PORT=28020
       - CS2_LOG=on
-      - DEBUG=${DEBUG:-1}
+      - DEBUG=${DEBUG:-0}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
-      - CS2_ADDITIONAL_ARGS=+exec gamemode_retake_server.cfg
+      - CS2_ADDITIONAL_ARGS=+game_type 0 +game_mode 0 +exec gamemode_retake_server.cfg
     volumes:
       - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
       - ./scripts/pre.sh:/home/steam/pre.sh:ro
@@ -372,6 +384,21 @@ services:
       - ./scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ./scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ./scripts/update_check.sh:/home/steam/update_check.sh:ro
-      - ./servers/retake3/data:/home/steam/cs2-dedicated:rw
-      - ./cfg/gamemode_retake_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_retake_server.cfg:ro
-      - ./servers/retake3/mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
+      - ./scripts/deploy-configs.sh:/home/steam/deploy-configs.sh:ro
+      - ./cfg:/home/steam/configs:ro
+      - ./servers/retake3/mapcycle.txt:/home/steam/mapcycles/retake.txt:ro
+      - cs2-retake3-data:/home/steam/cs2-dedicated:rw
+
+volumes:
+  cs2-gather1-data:
+    driver: local
+  cs2-gather2-data:
+    driver: local
+  cs2-deathmatch-data:
+    driver: local
+  cs2-retake1-data:
+    driver: local
+  cs2-retake2-data:
+    driver: local
+  cs2-retake3-data:
+    driver: local

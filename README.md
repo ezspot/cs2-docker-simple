@@ -1,9 +1,6 @@
-# CS2 Multi-Server Production Architecture
+# CS2 Multi-Server Architecture
 
-**Production-ready, DevSecOps-hardened Counter-Strike 2 dedicated server infrastructure for January 2026.**
-
-Designed for deterministic deployments, zero secret leakage, minimal drift, and stable 18-player performance on physical hardware.
-
+Designed for deterministic deployments, zero secret leakage, minimal drift.
 The project uses a custom Docker image that extends `joedwards32/cs2:latest` with operational dependencies (netcat, jq, curl) required for healthchecks and notifications.
 
 ---
@@ -99,9 +96,9 @@ cs2-docker-simple/
 │   ├── notifications.sh        # Discord notification library
 │   ├── healthcheck.sh          # A2S_INFO healthcheck
 │   └── update_check.sh         # Smart update checker
-└── servers/                    # Per-server data and configs
+└── servers/                    # Per-server mapcycle configs
     ├── gather1/
-    │   ├── data/               # Game files (bind mount, gitignored)
+    │   ├── data                # Game files (named volume)
     │   └── mapcycle.txt        # Instance-specific map rotation
     ├── gather2/
     ├── deathmatch/
@@ -114,12 +111,12 @@ cs2-docker-simple/
 
 | Server | Mode | Game Port | TV Port | CPU Cores | Memory |
 |--------|------|-----------|---------|-----------|--------|
-| gather1 | Competitive | 27015 | 27020 | 0,1 | 4GB |
-| gather2 | Competitive | 27016 | 27021 | 2,3 | 4GB |
-| deathmatch | Deathmatch | 27017 | 27022 | 4,5 | 4GB |
-| retake1 | Retake | 27018 | 27023 | 6,7 | 4GB |
-| retake2 | Retake | 27019 | 27024 | 8,9 | 4GB |
-| retake3 | Retake | 27020 | 27025 | 10,11 | 4GB |
+| gather1 | Competitive | 27015 | 28015 | 0,1 | 4GB |
+| gather2 | Competitive | 27016 | 28016 | 2,3 | 4GB |
+| deathmatch | Deathmatch | 27017 | 28017 | 4,5 | 6GB |
+| retake1 | Retake | 27018 | 28018 | 6,7 | 4GB |
+| retake2 | Retake | 27019 | 28019 | 8,9 | 4GB |
+| retake3 | Retake | 27020 | 28020 | 10,11 | 4GB |
 
 ---
 
@@ -300,14 +297,13 @@ ls -la servers/gather1/
 
 ### SteamCMD 0x602 Error
 
-**Symptom**: Update fails with error code `0x602`
+**Symptom**: Update fails with error code `0x602` during download or verification
 
 ```bash
-# Check disk space and I/O
-df -h
-iostat -x 1 5
+# Check disk space
+docker exec cs2-gather1 df -h /home/steam/cs2-dedicated
 
-# Check for disk errors
+# Check for disk errors (Linux)
 dmesg | grep -i error
 
 # Verify data directory is writable
@@ -315,10 +311,11 @@ docker exec cs2-gather1 touch /home/steam/cs2-dedicated/test && docker exec cs2-
 ```
 
 **Solutions**:
-- Ensure sufficient disk space (30GB+ free per server)
+- **Windows/WSL2 Users**: This project uses Docker named volumes and a staged config deployment via `scripts/deploy-configs.sh` to avoid NTFS/9p filesystem compatibility issues during SteamCMD verification.
+- Ensure sufficient disk space (60GB+ free per server)
+- Increase file descriptor limits: `ulimits.nofile` is set to 65535 in docker-compose.yml
 - Use fast storage (NVMe SSD recommended)
-- Disable validation temporarily: set `STEAMAPPVALIDATE=0` in `.env`
-- Check filesystem for errors: `sudo fsck /dev/sdX`
+- Check filesystem for errors: `sudo fsck /dev/sdX` (Linux)
 
 ### Discord Notifications Not Working
 
