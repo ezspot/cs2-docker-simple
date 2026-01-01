@@ -38,14 +38,13 @@ nano gather1_discord_webhook.txt  # Add Discord webhook URL
 
 ### SRCDS Token (per server)
 - Get from: https://steamcommunity.com/dev/managegameservers
-- **Best Practice**: Use different tokens per server for isolation
-- **Alternative**: Can reuse same token across servers (less secure)
+- Use different tokens per server for isolation
 
 ### RCON Password (per server)
-- **Must be unique per server** for security
-- Minimum 12 characters recommended
-- Use alphanumeric + symbols
-- Example: `Gather1_Rc0n!2026`
+- **MUST be unique per server** for security
+- Minimum 16 characters recommended (Jan 2026 standard)
+- Use alphanumeric + symbols + case variation
+- Example: `G4th3r1_Rcon_!2026_Secure`
 
 ### Discord Webhook (per server)
 - Get from: Discord Server Settings → Integrations → Webhooks

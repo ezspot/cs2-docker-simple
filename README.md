@@ -13,7 +13,8 @@ The project uses a custom Docker image that extends `joedwards32/cs2:latest` wit
 - **🔐 Secrets Management**: Docker secrets integration for SRCDS tokens, RCON passwords, and Discord webhooks
 - **🎯 Zero Duplication**: Single `docker-compose.yml` with YAML anchors for all 6 servers
 - **🛡️ Security Hardened**: `no-new-privileges`, capability dropping, read-only tmpfs, pids limits
-- **⚡ Performance Tuned**: CPU pinning, memory limits, ulimits for 18-player stability
+- **⚡ Performance Tuned**: CPU pinning (affinity), memory limits, and kernel-level optimizations
+- **🎯 Highly Modular**: Consolidated `docker-compose.yml` using YAML anchors for clean, dry configuration
 - **🔄 Smart Updates**: Match-hour awareness, restart markers, Discord notifications on updates
 - **💚 Advanced Healthchecks**: Real `A2S_INFO` queries with deferred checks during updates
 - **📊 Observability**: Discord webhook notifications for all lifecycle events
@@ -113,12 +114,12 @@ cs2-docker-simple/
 
 | Server | Mode | Game Port | TV Port | CPU Cores | Memory |
 |--------|------|-----------|---------|-----------|--------|
-| gather1 | Competitive | 27015 | 27020 | 0-1 | 4GB |
-| gather2 | Competitive | 27016 | 27021 | 2-3 | 4GB |
-| deathmatch | Deathmatch | 27017 | 27022 | 4-5 | 4GB |
-| retake1 | Retake | 27018 | 27023 | 6-7 | 4GB |
-| retake2 | Retake | 27019 | 27024 | 8-9 | 4GB |
-| retake3 | Retake | 27020 | 27025 | 10-11 | 4GB |
+| gather1 | Competitive | 27015 | 27020 | 0,1 | 4GB |
+| gather2 | Competitive | 27016 | 27021 | 2,3 | 4GB |
+| deathmatch | Deathmatch | 27017 | 27022 | 4,5 | 4GB |
+| retake1 | Retake | 27018 | 27023 | 6,7 | 4GB |
+| retake2 | Retake | 27019 | 27024 | 8,9 | 4GB |
+| retake3 | Retake | 27020 | 27025 | 10,11 | 4GB |
 
 ---
 
