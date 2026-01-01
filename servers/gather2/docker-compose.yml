@@ -24,22 +24,24 @@ services:
       - CS2_LOG=${CS2_LOG}
       - DEBUG=${DEBUG}
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE}
+      - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - CS2_ADDITIONAL_ARGS=+exec gamemode_competitive_server.cfg
     volumes:
-      - cs2-gather2-data:/home/steam/cs2-data
-      - ../../cfg/gamemode_competitive_server.cfg:/home/steam/cs2-data/game/csgo/cfg/gamemode_competitive_server.cfg:ro
+      - cs2-gather2-data:/home/steam/cs2-dedicated
+      - ../../cfg/gamemode_competitive_server.cfg:/home/steam/cs2-dedicated/game/csgo/cfg/gamemode_competitive_server.cfg:ro
       - ../../scripts/pre.sh:/home/steam/pre.sh:ro
       - ../../scripts/post.sh:/home/steam/post.sh:ro
       - ../../scripts/notifications.sh:/home/steam/notifications.sh:ro
       - ../../scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
       - ../../scripts/update_check.sh:/home/steam/update_check.sh:ro
+      - ./mapcycle.txt:/home/steam/cs2-dedicated/game/csgo/mapcycle.txt:ro
     healthcheck:
       test: ["CMD", "/bin/bash", "/home/steam/healthcheck.sh"]
       interval: 60s
-      timeout: 20s
-      retries: 3
-      start_period: 300s
+      timeout: 30s
+      retries: 10
+      start_period: 3600s
 
 volumes:
   cs2-gather2-data:

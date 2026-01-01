@@ -7,7 +7,8 @@ A production-ready, scalable architecture for Counter-Strike 2 dedicated servers
 - **Isolated Instances**: Each server has its own `docker-compose.yml` and `.env`.
 - **Advanced Healthchecks**: Real-time `A2S_INFO` queries to ensure the Source 2 engine is responding (via `healthcheck.sh`).
 - **Discord Notifications**: Rich embed notifications for server status changes (Booting, Errors, Health Alerts) via `notifications.sh`.
-- **Scheduled Update Checker**: `update_check.sh` script for manual or cron-based update validation.
+- **Scheduled Update Checker**: `update_check.sh` script for background update validation. Configure frequency via `CS2_UPDATE_INTERVAL` (in hours) in `.env`.
+- **Instance-Specific Mapcycles**: Each server has its own `mapcycle.txt` for full rotation control.
 - **Shared Configs**: Minimal mode-specific overrides in `cfg/`.
 - **Hooks**: Expandable pre/post start scripts in `scripts/`.
 - **Scalable**: Easily add more servers by copying a server directory.
