@@ -1,0 +1,46 @@
+services:
+  cs2-gather2:
+    image: joedwards32/cs2:latest
+    container_name: cs2-gather2
+    restart: unless-stopped
+    ports:
+      - "${CS2_PORT}:${CS2_PORT}/udp"
+      - "${CS2_PORT}:${CS2_PORT}/tcp"
+      - "${TV_PORT}:${TV_PORT}/udp"
+    env_file: .env
+    environment:
+      - SRCDS_TOKEN=${SRCDS_TOKEN}
+      - CS2_SERVERNAME=${CS2_SERVERNAME}
+      - CS2_GAMEALIAS=${CS2_GAMEALIAS}
+      - CS2_GAMETYPE=0
+      - CS2_GAMEMODE=1
+      - CS2_STARTMAP=${CS2_STARTMAP}
+      - CS2_MAXPLAYERS=${CS2_MAXPLAYERS}
+      - CS2_RCONPW=${CS2_RCONPW}
+      - CS2_PW=${CS2_PW}
+      - CS2_BOT_QUOTA=${CS2_BOT_QUOTA}
+      - TV_ENABLE=${TV_ENABLE}
+      - TV_PORT=${TV_PORT}
+      - CS2_LOG=${CS2_LOG}
+      - DEBUG=${DEBUG}
+      - STEAMAPPVALIDATE=${STEAMAPPVALIDATE}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - CS2_ADDITIONAL_ARGS=+exec gamemode_competitive_server.cfg
+    volumes:
+      - cs2-gather2-data:/home/steam/cs2-data
+      - ../../cfg/gamemode_competitive_server.cfg:/home/steam/cs2-data/game/csgo/cfg/gamemode_competitive_server.cfg:ro
+      - ../../scripts/pre.sh:/home/steam/pre.sh:ro
+      - ../../scripts/post.sh:/home/steam/post.sh:ro
+      - ../../scripts/notifications.sh:/home/steam/notifications.sh:ro
+      - ../../scripts/healthcheck.sh:/home/steam/healthcheck.sh:ro
+      - ../../scripts/update_check.sh:/home/steam/update_check.sh:ro
+    healthcheck:
+      test: ["CMD", "/bin/bash", "/home/steam/healthcheck.sh"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 300s
+
+volumes:
+  cs2-gather2-data:
+    name: cs2-gather2-data
