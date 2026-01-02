@@ -43,10 +43,13 @@ notify_discord() {
         UPDATING) icon="🔄" ;;
         UPDATED) icon="✅" ;;
         STARTING) icon="🎮" ;;
+        READY) icon="✨" ;;
         STOPPING) icon="🛑" ;;
         ERROR) icon="❌" ;;
         HEALTH_ALERT) icon="🚨" ;;
         DISK_LOW) icon="💾" ;;
+        INFO) icon="ℹ️" ;;
+        SUCCESS) icon="🎉" ;;
         *) icon="ℹ️" ;;
     esac
 
@@ -70,7 +73,27 @@ notify_discord() {
                     text: "CS2 Dedicated Server Service"
                 }
             }]
-        }')
+        }' 2>/dev/null)
 
-    curl -s -H "Content-Type: application/json" -X POST -d "$payload" "$webhook_url" > /dev/null || echo "Failed to send Discord notification"
+    if [[ -z "$payload" ]]; then
+        log "ERROR" "Failed to generate JSON payload for Discord notification"
+        return 1
+    fi
+
+    local response
+    local http_code
+    
+    log "DEBUG" "Sending Discord notification: status=$status"
+    
+    # Execute curl and capture both output and http_code
+    response=$(curl -s -D - -H "Content-Type: application/json" -X POST -d "$payload" "$webhook_url" 2>&1)
+    http_code=$(echo "$response" | grep "HTTP/" | tail -1 | awk '{print $2}')
+    
+    if [[ "$http_code" != "204" && "$http_code" != "200" ]]; then
+        log "ERROR" "Discord notification failed. HTTP Code: $http_code"
+        log "ERROR" "Response: $(echo "$response" | head -n 5)"
+        return 1
+    fi
+    
+    log "INFO" "Discord notification sent successfully ($status)"
 }

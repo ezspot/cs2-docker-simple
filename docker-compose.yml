@@ -266,9 +266,8 @@ services:
     environment:
       - CS2_PORT=27018
       - CS2_SERVERNAME=${RETAKE1_SERVERNAME:-CS2-Retake1}
-      - CS2_GAMEALIAS=retake
       - CS2_GAMETYPE=0
-      - CS2_GAMEMODE=0
+      - CS2_GAMEMODE=1
       - CS2_STARTMAP=${RETAKE1_STARTMAP:-de_dust2}
       - CS2_MAXPLAYERS=${RETAKE1_MAXPLAYERS:-9}
       - CS2_PW=${RETAKE1_PW:-}
@@ -280,7 +279,7 @@ services:
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
-      - CS2_ADDITIONAL_ARGS=+game_type 0 +game_mode 0 +exec gamemode_retake_server.cfg
+      - CS2_ADDITIONAL_ARGS=+sv_skirmish_id 12 +exec gamemode_retake_server.cfg
     volumes:
       - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
       - ./scripts/pre.sh:/home/steam/pre.sh:ro
@@ -314,9 +313,8 @@ services:
     environment:
       - CS2_PORT=27019
       - CS2_SERVERNAME=${RETAKE2_SERVERNAME:-CS2-Retake2}
-      - CS2_GAMEALIAS=retake
       - CS2_GAMETYPE=0
-      - CS2_GAMEMODE=0
+      - CS2_GAMEMODE=1
       - CS2_STARTMAP=${RETAKE2_STARTMAP:-de_dust2}
       - CS2_MAXPLAYERS=${RETAKE2_MAXPLAYERS:-9}
       - CS2_PW=${RETAKE2_PW:-}
@@ -328,7 +326,7 @@ services:
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
-      - CS2_ADDITIONAL_ARGS=+game_type 0 +game_mode 0 +exec gamemode_retake_server.cfg
+      - CS2_ADDITIONAL_ARGS=+sv_skirmish_id 12 +exec gamemode_retake_server.cfg
     volumes:
       - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
       - ./scripts/pre.sh:/home/steam/pre.sh:ro
@@ -362,9 +360,8 @@ services:
     environment:
       - CS2_PORT=27020
       - CS2_SERVERNAME=${RETAKE3_SERVERNAME:-CS2-Retake3}
-      - CS2_GAMEALIAS=retake
       - CS2_GAMETYPE=0
-      - CS2_GAMEMODE=0
+      - CS2_GAMEMODE=1
       - CS2_STARTMAP=${RETAKE3_STARTMAP:-de_inferno}
       - CS2_MAXPLAYERS=${RETAKE3_MAXPLAYERS:-9}
       - CS2_PW=${RETAKE3_PW:-}
@@ -376,7 +373,7 @@ services:
       - STEAMAPPVALIDATE=${STEAMAPPVALIDATE:-0}
       - CS2_UPDATE_INTERVAL=${CS2_UPDATE_INTERVAL:-0}
       - CS2_UPDATE_MATCH_HOURS=${CS2_UPDATE_MATCH_HOURS:-}
-      - CS2_ADDITIONAL_ARGS=+game_type 0 +game_mode 0 +exec gamemode_retake_server.cfg
+      - CS2_ADDITIONAL_ARGS=+sv_skirmish_id 12 +exec gamemode_retake_server.cfg
     volumes:
       - ./scripts/entrypoint-wrapper.sh:/home/steam/entrypoint-wrapper.sh:ro
       - ./scripts/pre.sh:/home/steam/pre.sh:ro

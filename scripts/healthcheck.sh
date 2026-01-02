@@ -31,6 +31,9 @@ READY_FLAG="/tmp/server_ready"
 
 if [[ "$RESPONSE" == "ffffffff49" ]]; then
     # Mark server as officially "ready" for the first time
+    if [[ ! -f "$READY_FLAG" ]]; then
+        notify_discord "Server is now ready and responding to A2S_INFO queries." "3066993" "READY"
+    fi
     touch "$READY_FLAG"
     # Reset failure count on success
     rm -f /tmp/health_fail_count

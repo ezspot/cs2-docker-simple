@@ -62,9 +62,21 @@ run_update() {
     fi
     
     if [[ -n "$manifest_before" && -n "$manifest_after" && "$manifest_before" != "$manifest_after" ]]; then
-        log "INFO" "CS2 update detected! Server restart required."
-        echo "$(date +'%Y-%m-%d %H:%M:%S') - Update detected, restart required" > "$RESTART_MARKER"
-        notify_discord "🔄 CS2 update detected! Server restart required. Restart marker created at $RESTART_MARKER" "16776960" "UPDATED"
+        log "INFO" "CS2 update detected! Restarting server to apply update..."
+        echo "$(date +'%Y-%m-%d %H:%M:%S') - Update detected, triggering restart" > "$RESTART_MARKER"
+        notify_discord "🔄 CS2 update detected! Restarting server to apply update..." "16776960" "UPDATED"
+        
+        # Give the notification a moment to send
+        sleep 5
+        
+        # Kill the CS2 process. The container will restart (unless-stopped) and SteamCMD will run again in entry.sh
+        if pgrep -x "cs2" > /dev/null; then
+            log "INFO" "Terminating cs2 process..."
+            pkill -15 -x "cs2" || kill -15 $(pgrep -x "cs2")
+        else
+            log "WARN" "CS2 process not found, but update was detected. Restarting container..."
+            exit 1 # Exit script, if it's the main process it triggers restart, but here it's backgrounded.
+        fi
     else
         log "INFO" "Update check completed. Server is up to date."
     fi

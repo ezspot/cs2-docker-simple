@@ -45,6 +45,21 @@ if [[ -n "$SERVER_PREFIX" ]]; then
             echo "export DISCORD_WEBHOOK_URL='$WEBHOOK_VAL'" > /home/steam/.discord_webhook
         fi
     fi
+
+    # Ensure hooks are correctly linked in the game directory so entry.sh sources them
+    STEAMAPPDIR="${STEAMAPPDIR:-/home/steam/cs2-dedicated}"
+    mkdir -p "${STEAMAPPDIR}"
+    
+    for hook in pre.sh post.sh; do
+        if [[ -f "/home/steam/${hook}" ]]; then
+            ln -sf "/home/steam/${hook}" "${STEAMAPPDIR}/${hook}"
+            echo "[ENTRYPOINT] Linked /home/steam/${hook} to ${STEAMAPPDIR}/${hook}"
+        fi
+    done
+
+    # Send initial starting notification
+    source /home/steam/notifications.sh
+    notify_discord "Container has started. Beginning SteamCMD checks..." "3447003" "STARTING"
 else
     echo "[ENTRYPOINT] Warning: Could not detect server prefix from secrets"
 fi
